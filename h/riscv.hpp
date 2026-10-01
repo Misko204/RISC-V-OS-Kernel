@@ -1,4 +1,4 @@
-// riscv.hpp - pristup sistemskim (CSR) registrima RISC-V procesora
+// riscv.hpp - access to RISC-V supervisor control and status registers (CSRs)
 
 #ifndef _riscv_hpp_
 #define _riscv_hpp_
@@ -7,20 +7,20 @@
 
 class Riscv {
 public:
-    // ---- Biti registra sstatus ----
+    // ---- sstatus bits ----
     enum BitMaskSstatus : uint64 {
-        SSTATUS_SIE  = (1UL << 1),   // dozvola prekida u S rezimu
-        SSTATUS_SPIE = (1UL << 5),   // prethodna vrednost SIE
-        SSTATUS_SPP  = (1UL << 8),   // prethodni rezim: 0 = U, 1 = S
+        SSTATUS_SIE  = (1UL << 1),   // supervisor interrupt enable
+        SSTATUS_SPIE = (1UL << 5),   // previous value of SIE
+        SSTATUS_SPP  = (1UL << 8),   // previous privilege mode: 0 = user, 1 = supervisor
     };
 
-    // ---- Biti registra sip ----
+    // ---- sip bits (pending interrupts) ----
     enum BitMaskSip : uint64 {
-        SIP_SSIP = (1UL << 1),       // softverski prekid (tajmer)
-        SIP_SEIP = (1UL << 9),       // spoljasnji prekid (konzola)
+        SIP_SSIP = (1UL << 1),       // supervisor software interrupt (timer)
+        SIP_SEIP = (1UL << 9),       // supervisor external interrupt (console)
     };
 
-    // ---- Vrednosti registra scause ----
+    // ---- scause values ----
     static constexpr uint64 SCAUSE_TIMER         = 0x8000000000000001UL;
     static constexpr uint64 SCAUSE_EXTERNAL      = 0x8000000000000009UL;
     static constexpr uint64 SCAUSE_ECALL_USER    = 0x0000000000000008UL;
@@ -43,8 +43,8 @@ public:
     // ---- sstatus ----
     static inline uint64 r_sstatus();
     static inline void   w_sstatus(uint64 value);
-    static inline void   ms_sstatus(uint64 mask);   // postavi bite
-    static inline void   mc_sstatus(uint64 mask);   // obrisi bite
+    static inline void   ms_sstatus(uint64 mask);   // set bits
+    static inline void   mc_sstatus(uint64 mask);   // clear bits
 
     // ---- sip ----
     static inline uint64 r_sip();
@@ -52,11 +52,11 @@ public:
     static inline void   ms_sip(uint64 mask);
     static inline void   mc_sip(uint64 mask);
 
-    // Zaustavlja emulator
+    // Powers off the QEMU emulator.
     static inline void haltEmulator();
 };
 
-// ======================= implementacija =======================
+// ======================= implementation =======================
 
 inline uint64 Riscv::r_scause() {
     uint64 volatile value;
@@ -131,6 +131,7 @@ inline void Riscv::mc_sip(uint64 mask) {
 }
 
 inline void Riscv::haltEmulator() {
+    // Writing 0x5555 to this address powers off QEMU.
     *(volatile unsigned int*) 0x100000 = 0x5555;
     while (true) { }
 }

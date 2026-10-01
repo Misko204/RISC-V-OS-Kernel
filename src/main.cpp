@@ -1,10 +1,10 @@
-// main.cpp - FAZA 0: provera okruzenja
+// main.cpp - kernel entry point (currently a smoke test of the environment)
 
 #include "../h/riscv.hpp"
 #include "../h/kprint.hpp"
 
 int main() {
-    kprintString("Jezgro pokrenuto!\n");
+    kprintString("Kernel started\n");
 
     kprintString("sstatus = ");
     kprintUInt(Riscv::r_sstatus(), 16);
@@ -14,15 +14,15 @@ int main() {
     uint64 heapEnd   = (uint64)HEAP_END_ADDR;
     uint64 heapSize  = heapEnd - heapStart;
 
-    kprintString("HEAP: ");
+    kprintString("Heap: ");
     kprintUInt(heapStart, 16);
     kprintString(" - ");
     kprintUInt(heapEnd, 16);
     kprintString("\n");
 
-    kprintString("Velicina heap-a: ");
+    kprintString("Heap size: ");
     kprintUInt(heapSize);
-    kprintString(" B, blokova: ");
+    kprintString(" B, blocks: ");
     kprintUInt(heapSize / MEM_BLOCK_SIZE);
     kprintString("\n");
 

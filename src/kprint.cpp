@@ -1,15 +1,15 @@
-// kprint.cpp - implementacija debag ispisa
+// kprint.cpp - kernel debug output
 
 #include "../h/kprint.hpp"
 #include "../h/riscv.hpp"
 #include "../lib/console.h"
 
-// Ispis jednog znaka sa maskiranim prekidima.
+// Prints a single character with interrupts masked.
 static void kputc(char c) {
     uint64 oldSstatus = Riscv::r_sstatus();
-    Riscv::mc_sstatus(Riscv::SSTATUS_SIE);          // zabrani prekide
+    Riscv::mc_sstatus(Riscv::SSTATUS_SIE);          // disable interrupts
     __putc(c);
-    if (oldSstatus & Riscv::SSTATUS_SIE) {          // vrati SIE samo ako je bio ukljucen
+    if (oldSstatus & Riscv::SSTATUS_SIE) {          // re-enable only if they were enabled
         Riscv::ms_sstatus(Riscv::SSTATUS_SIE);
     }
 }
@@ -23,7 +23,7 @@ void kprintString(const char* s) {
 
 void kprintUInt(uint64 x, uint64 base) {
     static const char digits[] = "0123456789ABCDEF";
-    char buffer[24];                                // 2^64 ima najvise 20 decimalnih cifara
+    char buffer[24];                                // 2^64 has at most 20 decimal digits
     int count = 0;
 
     do {
@@ -34,14 +34,14 @@ void kprintUInt(uint64 x, uint64 base) {
     if (base == 16) kprintString("0x");
 
     while (count > 0) {
-        kputc(buffer[--count]);                     // cifre su upisane unazad
+        kputc(buffer[--count]);                     // digits were stored in reverse order
     }
 }
 
 void kprintInt(long x) {
     if (x < 0) {
         kputc('-');
-        kprintUInt((uint64)0 - (uint64)x);          // bezbedno i za najmanji long
+        kprintUInt((uint64)0 - (uint64)x);          // safe even for the minimum long value
     } else {
         kprintUInt((uint64)x);
     }

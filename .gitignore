@@ -2,3 +2,5 @@ build/
 kernel
 kernel.asm
 .gdbinit
+.idea/
+cmake-build-*/
