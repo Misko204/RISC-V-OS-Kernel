@@ -137,3 +137,30 @@ prefix) to avoid clashes at link time.
   (`scause = 0x8000000000000001`) at 10 Hz.
 - The console is a UART behind the PLIC (IRQ 10).
 - Writing `0x5555` to `0x100000` powers off QEMU.
+
+## Memory allocator
+
+`MemoryAllocator` (`h/memory_allocator.hpp`) manages the heap between
+`HEAP_START_ADDR` and `HEAP_END_ADDR` in units of `MEM_BLOCK_SIZE` (64 B)
+blocks.
+
+- **Algorithm:** first fit over a free list sorted by address. A free segment
+  larger than needed is split; its tail stays in the list.
+- **Free list:** doubly linked, with nodes `{size, next, prev}` stored inside
+  the free segments themselves, so bookkeeping costs no extra memory.
+- **Coalescing:** on every `free`, the segment is inserted by address and merged
+  with its right and then its left neighbour if they are adjacent. A fully
+  freed heap is always a single segment again.
+- **Allocated segments:** the first block holds a header `{size, magic}`. The
+  caller gets the address of the next block, so returned pointers are always
+  block-aligned. This costs one block per allocation.
+- **Validation in `free`:** null pointer, address outside the heap, misaligned
+  address, and a missing magic value (not allocated, or freed twice) are each
+  reported with a distinct negative error code. The magic value is cleared on
+  `free`, so double frees are detected.
+- **Statistics:** `freeSpace()` and `largestFreeBlock()` report raw free bytes.
+  Because of the header block, the largest single allocation that can succeed
+  is one block smaller than `largestFreeBlock()`.
+- **Initialization:** `init()` must be called explicitly at boot. There is no
+  C runtime, so constructors of global objects are never run; the allocator
+  therefore uses static members and constant initializers only.

@@ -5,7 +5,7 @@ written from scratch in C++ and assembly and running on QEMU.
 
 ## Features
 
-- [ ] Contiguous memory allocator (first fit, block-granular, coalescing)
+- [x] Contiguous memory allocator (first fit, block-granular, coalescing)
 - [ ] Trap handling and system call ABI (`ecall`)
 - [ ] Threads with context switching
 - [ ] Counting semaphores
@@ -44,6 +44,7 @@ make clean
 ```
 h/      kernel and API headers
 src/    kernel and API sources (.cpp, .S)
+test/   kernel self-tests
 lib/    hardware access layer and boot code (prebuilt)
 docs/   design documentation
 ```
