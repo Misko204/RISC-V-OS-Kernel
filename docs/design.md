@@ -164,3 +164,44 @@ blocks.
 - **Initialization:** `init()` must be called explicitly at boot. There is no
   C runtime, so constructors of global objects are never run; the allocator
   therefore uses static members and constant initializers only.
+
+## Traps and system calls
+
+All traps (system calls, exceptions and interrupts) enter the kernel through a
+single routine, `supervisorTrap` in `src/trap_entry.S`, installed in `stvec` in
+direct mode.
+
+**Entry and exit.** `sscratch` tells the entry code where the trap came from:
+it holds the top of the current thread's kernel stack while U-mode code runs,
+and 0 while S-mode code runs.
+
+1. `csrrw sp, sscratch, sp` swaps the two. A nonzero result means the trap
+   came from U-mode and `sp` is now the kernel stack; otherwise the swap is
+   undone and the current S-mode stack is used.
+2. All registers `x1`–`x31`, `sepc` and `sstatus` are saved as a `TrapFrame`
+   on the stack, and `sscratch` is set to 0.
+3. `Trap::handle` dispatches on `scause`.
+4. `sepc` and `sstatus` are restored from the frame. If `sstatus.SPP` says the
+   trap returns to U-mode, `sscratch` is set to the top of the kernel stack
+   again. Then all registers are restored and `sret` returns.
+
+Saving `sepc` and `sstatus` in the frame, rather than leaving them in the CSRs,
+lets the handler switch threads: each thread returns through its own frame.
+
+**Dispatch.**
+
+| `scause` | Meaning | Action |
+|---|---|---|
+| 8, 9 | `ecall` from U-mode / S-mode | `sepc += 4`, run the system call, result in `a0` |
+| interrupt 1 | timer (forwarded as a software interrupt) | clear `sip.SSIP` |
+| interrupt 9 | external (console via PLIC) | console driver |
+| anything else | exception | print `scause`, `sepc`, `stval`, mode, and halt |
+
+**ABI.** `a0` holds the call number, `a1`–`a4` the arguments, and the result
+is returned in `a0`. Negative `int` results are sign-extended so they survive
+the trip through a 64-bit register. Unknown call numbers return
+`ERR_UNKNOWN_SYSCALL`. `mem_alloc` takes its size in blocks at this level.
+
+**C API.** `src/syscall_c.cpp` wraps each call in a function. A single helper
+binds the arguments to `a0`–`a4` with register variables and executes
+`ecall`. `mem_alloc` converts bytes to blocks before the call.
