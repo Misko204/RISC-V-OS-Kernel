@@ -50,6 +50,10 @@ supervisorTrap:
     mv a0, sp                       # trapHandler(TrapFrame* frame)
     call trapHandler
 
+# Exit path. Also used to start a new thread: contextSwitch "returns" here
+# with sp pointing to the thread's initial TrapFrame (see TCB::TCB).
+.global trapReturn
+trapReturn:
     ld t0, SEPC_OFF(sp)
     csrw sepc, t0
     ld t0, SSTATUS_OFF(sp)

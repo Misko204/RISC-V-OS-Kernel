@@ -205,3 +205,57 @@ the trip through a 64-bit register. Unknown call numbers return
 **C API.** `src/syscall_c.cpp` wraps each call in a function. A single helper
 binds the arguments to `a0`–`a4` with register variables and executes
 `ecall`. `mem_alloc` converts bytes to blocks before the call.
+
+## Threads
+
+A thread is represented by a `TCB` (`h/tcb.hpp`). It holds the thread's saved
+`Context`, its stacks, its mode (user or supervisor), its state
+(`READY`, `RUNNING`, `FINISHED`) and a `next` link used by whichever list the
+thread is currently in.
+
+**Kinds of threads.**
+
+| Thread | Mode | Stacks |
+|---|---|---|
+| user threads (`thread_create`, including `userMain`) | U | user stack (allocated by the C API) + kernel stack |
+| `main` | S | the boot stack; it becomes a thread in `TCB::init()` |
+| idle | S | kernel stack only |
+
+**Switching.** `TCB::dispatch()` puts the running thread at the back of the
+ready queue (unless it has finished), takes the first ready thread and calls
+`contextSwitch(current, next)` (`src/context_switch.S`). That routine saves
+`ra`, `sp` and `s0`–`s11` into the current TCB and loads them from the next
+one, so `ret` continues on the next thread's kernel stack. Since `dispatch`
+always runs inside a system call or interrupt, every other register of the
+thread is already in its `TrapFrame`.
+
+**Starting a thread.** A new thread has never trapped, so the kernel fakes it:
+it builds a `TrapFrame` at the top of the new kernel stack with
+`sepc = threadWrapper`, `a0 = body`, `a1 = arg`, `sp` = the thread's stack top,
+and `sstatus.SPP`/`SPIE` set for the thread's mode with interrupts enabled.
+The thread's saved context points to that frame with `ra = trapReturn`, the
+exit half of the trap routine. The first switch to the thread therefore
+"returns" from a trap straight into `threadWrapper`, which calls `body(arg)`
+and then `thread_exit()`.
+
+**Scheduling.** `Scheduler` is a FIFO queue linked through `TCB::next`. The
+idle thread is never queued; `Scheduler::get()` returns it only when the queue
+is empty.
+
+**Termination.** `thread_exit` marks the thread `FINISHED` and switches away.
+The thread cannot free its own kernel stack while running on it, so it is
+moved to a list of finished threads; every `dispatch` frees the finished
+threads other than the running one, together with their stacks.
+
+**Startup and shutdown.** `main` initializes the allocator and the trap vector,
+calls `TCB::init()` and starts `userMain` as a user thread. It then yields
+until no user thread is left and powers off the machine.
+
+**System calls.**
+
+| Call | ABI arguments | Notes |
+|---|---|---|
+| `thread_create` (0x11) | `a1` handle, `a2` body, `a3` arg, `a4` stack top | the C API allocates the `DEFAULT_STACK_SIZE` stack first and frees it if the call fails |
+| `thread_exit` (0x12) | none | does not return |
+| `thread_dispatch` (0x13) | none | |
+| `putc` (0x42) | `a1` character | temporary synchronous implementation |

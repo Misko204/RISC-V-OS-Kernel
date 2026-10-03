@@ -19,8 +19,14 @@ private:
     static uint64 memGetFreeSpace(TrapFrame* frame);
     static uint64 memGetLargestFreeBlock(TrapFrame* frame);
 
-    // Sign-extends a (possibly negative) int return value into a register.
-    static uint64 fromInt(int value) { return (uint64)(long)value; }
+    static uint64 threadCreate(TrapFrame* frame);
+    static uint64 threadExit(TrapFrame* frame);
+    static uint64 threadDispatch(TrapFrame* frame);
+
+    static uint64 putc(TrapFrame* frame);
+
+    // Sign-extends a (possibly negative) return value into a register.
+    static uint64 fromInt(long value) { return (uint64)value; }
 };
 
 #endif // _syscall_handler_hpp_

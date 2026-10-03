@@ -4,7 +4,12 @@
 #define _tests_hpp_
 
 // Each function prints its results and returns the number of failed checks.
+
+// Kernel-mode tests, called from main().
 int testMemoryAllocator();
 int testSystemCalls();
+
+// User-mode tests, called from userMain().
+int testThreads();
 
 #endif // _tests_hpp_

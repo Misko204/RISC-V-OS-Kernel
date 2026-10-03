@@ -41,6 +41,7 @@ private:
 };
 
 // Defined in src/trap_entry.S.
-extern "C" void supervisorTrap();
+extern "C" void supervisorTrap();   // trap vector
+extern "C" void trapReturn();       // restores a TrapFrame from sp and executes sret
 
 #endif // _trap_hpp_

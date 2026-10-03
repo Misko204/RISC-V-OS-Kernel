@@ -19,6 +19,8 @@ static uint64 syscall(uint64 code, uint64 arg1 = 0, uint64 arg2 = 0,
     return a0;
 }
 
+// ---------------------------------------------------------------- memory
+
 void* mem_alloc(size_t size) {
     // The ABI takes the size in blocks. Written this way to avoid overflow for huge sizes.
     size_t blocks = size / MEM_BLOCK_SIZE + (size % MEM_BLOCK_SIZE != 0 ? 1 : 0);
@@ -35,4 +37,32 @@ size_t mem_get_free_space() {
 
 size_t mem_get_largest_free_block() {
     return (size_t)syscall(SYS_MEM_GET_LARGEST_FREE_BLOCK);
+}
+
+// ---------------------------------------------------------------- threads
+
+int thread_create(thread_t* handle, void (*start_routine)(void*), void* arg) {
+    // The ABI expects the caller to provide the stack: allocate it here and
+    // pass a pointer just past its end (the stack grows downwards).
+    void* stack = mem_alloc(DEFAULT_STACK_SIZE);
+    if (stack == nullptr) return (int)ERR_OUT_OF_MEMORY;
+
+    int result = (int)syscall(SYS_THREAD_CREATE, (uint64)handle, (uint64)start_routine,
+                              (uint64)arg, (uint64)stack + DEFAULT_STACK_SIZE);
+    if (result < 0) mem_free(stack);    // on success the kernel owns the stack
+    return result;
+}
+
+int thread_exit() {
+    return (int)syscall(SYS_THREAD_EXIT);
+}
+
+void thread_dispatch() {
+    syscall(SYS_THREAD_DISPATCH);
+}
+
+// ---------------------------------------------------------------- console
+
+void putc(char c) {
+    syscall(SYS_PUTC, (uint64)(unsigned char)c);
 }
