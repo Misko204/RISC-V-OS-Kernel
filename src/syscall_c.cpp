@@ -1,0 +1,38 @@
+// syscall_c.cpp - C API of the kernel (user side)
+// Every function packs its arguments into registers and executes ecall.
+
+#include "../h/syscall_c.hpp"
+#include "../h/syscall_codes.hpp"
+
+// Performs a system call: a0 = code, a1..a4 = arguments; the result comes back in a0.
+static uint64 syscall(uint64 code, uint64 arg1 = 0, uint64 arg2 = 0,
+                      uint64 arg3 = 0, uint64 arg4 = 0) {
+    register uint64 a0 __asm__("a0") = code;
+    register uint64 a1 __asm__("a1") = arg1;
+    register uint64 a2 __asm__("a2") = arg2;
+    register uint64 a3 __asm__("a3") = arg3;
+    register uint64 a4 __asm__("a4") = arg4;
+    __asm__ volatile ("ecall"
+    : "+r"(a0)
+    : "r"(a1), "r"(a2), "r"(a3), "r"(a4)
+    : "memory");
+    return a0;
+}
+
+void* mem_alloc(size_t size) {
+    // The ABI takes the size in blocks. Written this way to avoid overflow for huge sizes.
+    size_t blocks = size / MEM_BLOCK_SIZE + (size % MEM_BLOCK_SIZE != 0 ? 1 : 0);
+    return (void*)syscall(SYS_MEM_ALLOC, blocks);
+}
+
+int mem_free(void* ptr) {
+    return (int)syscall(SYS_MEM_FREE, (uint64)ptr);
+}
+
+size_t mem_get_free_space() {
+    return (size_t)syscall(SYS_MEM_GET_FREE_SPACE);
+}
+
+size_t mem_get_largest_free_block() {
+    return (size_t)syscall(SYS_MEM_GET_LARGEST_FREE_BLOCK);
+}

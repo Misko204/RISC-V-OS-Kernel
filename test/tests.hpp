@@ -5,5 +5,6 @@
 
 // Each function prints its results and returns the number of failed checks.
 int testMemoryAllocator();
+int testSystemCalls();
 
 #endif // _tests_hpp_
