@@ -6,7 +6,7 @@ written from scratch in C++ and assembly and running on QEMU.
 ## Features
 
 - [x] Contiguous memory allocator (first fit, block-granular, coalescing)
-- [ ] Trap handling and system call ABI (`ecall`)
+- [x] Trap handling and system call ABI (`ecall`)
 - [ ] Threads with context switching
 - [ ] Counting semaphores
 - [ ] Preemptive time sharing (timer interrupt)
