@@ -220,6 +220,7 @@ list the thread is currently in.
 | user threads (`thread_create`, including `userMain`) | U | user stack (allocated by the C API) + kernel stack |
 | `main` | S | the boot stack; it becomes a thread in `TCB::init()` |
 | idle | S | kernel stack only |
+| console output | S | kernel stack only (see Console) |
 
 **Switching.** `TCB::dispatch()` puts the running thread at the back of the
 ready queue (unless it has finished), takes the first ready thread and calls
@@ -247,8 +248,9 @@ The thread cannot free its own kernel stack while running on it, so it is
 moved to a list of finished threads; every `dispatch` frees the finished
 threads other than the running one, together with their stacks.
 
-**Startup and shutdown.** `main` initializes the allocator and the trap vector,
-calls `TCB::init()` and starts `userMain` as a user thread. It then waits on a
+**Startup and shutdown.** `main` initializes the allocator, the trap vector
+and the console, runs the kernel-mode self-tests, calls `TCB::init()`, starts
+the console output thread and starts `userMain` as a user thread. It then waits on a
 kernel semaphore that `TCB::exit()` signals when the last user thread
 finishes, and powers off the machine. While it waits, main is blocked and
 uses no CPU time.
@@ -260,7 +262,6 @@ uses no CPU time.
 | `thread_create` (0x11) | `a1` handle, `a2` body, `a3` arg, `a4` stack top | the C API allocates the `DEFAULT_STACK_SIZE` stack first and frees it if the call fails |
 | `thread_exit` (0x12) | none | does not return |
 | `thread_dispatch` (0x13) | none | |
-| `putc` (0x42) | `a1` character | temporary synchronous implementation |
 
 ## Semaphores
 

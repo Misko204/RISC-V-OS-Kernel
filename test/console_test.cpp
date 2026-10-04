@@ -138,7 +138,10 @@ int testConsoleEcho() {
     int length = 0;
     while (true) {
         char c = getc();
-        if (c == '\r' || c == '\n') break;
+        if (c == '\r' || c == '\n') {
+            if (length == 0) continue;      // leftover line ending from earlier input
+            break;
+        }
         if (length < 63) line[length++] = c;
         putc(c);                    // echo while typing
     }

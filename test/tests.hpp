@@ -1,4 +1,4 @@
-// tests.hpp - kernel self-tests
+// tests.hpp - self-tests (kernel mode and user mode)
 
 #ifndef _tests_hpp_
 #define _tests_hpp_
