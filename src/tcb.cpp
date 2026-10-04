@@ -49,9 +49,9 @@ TCB* TCB::createKernelThread(Body body, void* arg) {
 }
 
 TCB::TCB(Body body, void* arg, bool userMode, void* userStackTop) noexcept
-: context(), body(body), arg(arg), kernelStack(nullptr), userStack(nullptr),
-userMode(userMode), state(State::READY), blockResult(0),
-timeSlice(DEFAULT_TIME_SLICE), sleepDelta(0), next(nullptr) {
+    : context(), body(body), arg(arg), kernelStack(nullptr), userStack(nullptr),
+      userMode(userMode), state(State::READY), blockResult(0),
+      timeSlice(DEFAULT_TIME_SLICE), sleepDelta(0), next(nullptr) {
 
     if (body == nullptr) return;    // the main thread: already running, no stacks
 
