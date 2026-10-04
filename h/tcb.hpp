@@ -5,6 +5,8 @@
 
 #include "../lib/hw.h"
 
+class KSemaphore;
+
 // Registers saved by contextSwitch: the return address, the stack pointer and
 // the callee-saved registers. Everything else is already on the thread's
 // kernel stack (TrapFrame), or is caller-saved by the calling convention.
@@ -22,7 +24,7 @@ class TCB {
 public:
     using Body = void (*)(void*);
 
-    enum class State { READY, RUNNING, FINISHED };
+    enum class State { READY, RUNNING, BLOCKED, FINISHED };
 
     // Wraps the code currently executing (main) into a thread and creates the
     // idle thread. Must be called once, after MemoryAllocator::init().
@@ -42,6 +44,17 @@ public:
 
     // Terminates the running thread. Does not return.
     static void exit();
+
+    // Blocks the running thread and switches to another one. The caller must
+    // already have put the thread into some wait queue. Returns the value
+    // passed to unblock() when the thread is woken up.
+    static int block();
+
+    // Makes a blocked thread ready again; its block() call returns `result`.
+    static void unblock(TCB* thread, int result);
+
+    // The semaphore is signalled when the last user thread finishes.
+    static void setUserThreadsDoneSemaphore(KSemaphore* sem) { userThreadsDone = sem; }
 
     static TCB* running() { return runningThread; }
     static size_t liveUserThreads() { return userThreadCount; }
@@ -68,13 +81,15 @@ private:
     void*   userStack;      // bottom of the user stack (nullptr for kernel threads)
     bool    userMode;
     State   state;
-    TCB*    next;           // link in the ready queue or in the list of finished threads
+    int     blockResult;    // value returned by block() after unblock()
+    TCB*    next;           // link in a ThreadQueue or in the list of finished threads
 
     static TCB* runningThread;
     static TCB* finishedThreads;
     static size_t userThreadCount;
+    static KSemaphore* userThreadsDone;
 
-    friend class Scheduler;
+    friend class ThreadQueue;
 };
 
 #endif // _tcb_hpp_

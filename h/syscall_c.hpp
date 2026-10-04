@@ -33,6 +33,25 @@ int thread_exit();
 // Gives the CPU to another ready thread (or back to the caller if there is none).
 void thread_dispatch();
 
+// ---------------------------------------------------------------- semaphores
+
+class _sem;                 // opaque: the kernel's semaphore object
+typedef _sem* sem_t;
+
+// Creates a semaphore with the given initial value and stores its handle in *handle.
+// Returns 0 on success, a negative error code otherwise.
+int sem_open(sem_t* handle, unsigned init);
+
+// Destroys the semaphore. Threads waiting on it are released and their sem_wait fails.
+int sem_close(sem_t handle);
+
+// Waits on the semaphore. Returns 0, or a negative error code (also when the
+// semaphore is closed while the caller is waiting).
+int sem_wait(sem_t id);
+
+// Signals the semaphore. Returns 0, or a negative error code.
+int sem_signal(sem_t id);
+
 // ---------------------------------------------------------------- console
 
 // Writes one character to the console.

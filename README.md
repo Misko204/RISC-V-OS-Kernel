@@ -8,7 +8,7 @@ written from scratch in C++ and assembly and running on QEMU.
 - [x] Contiguous memory allocator (first fit, block-granular, coalescing)
 - [x] Trap handling and system call ABI (`ecall`)
 - [x] Threads with context switching
-- [ ] Counting semaphores
+- [x] Counting semaphores
 - [ ] Preemptive time sharing (timer interrupt)
 - [ ] Timed sleep
 - [ ] Buffered, interrupt-driven console I/O

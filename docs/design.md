@@ -210,8 +210,8 @@ binds the arguments to `a0`–`a4` with register variables and executes
 
 A thread is represented by a `TCB` (`h/tcb.hpp`). It holds the thread's saved
 `Context`, its stacks, its mode (user or supervisor), its state
-(`READY`, `RUNNING`, `FINISHED`) and a `next` link used by whichever list the
-thread is currently in.
+(`READY`, `RUNNING`, `BLOCKED`, `FINISHED`) and a `next` link used by whichever
+list the thread is currently in.
 
 **Kinds of threads.**
 
@@ -248,8 +248,10 @@ moved to a list of finished threads; every `dispatch` frees the finished
 threads other than the running one, together with their stacks.
 
 **Startup and shutdown.** `main` initializes the allocator and the trap vector,
-calls `TCB::init()` and starts `userMain` as a user thread. It then yields
-until no user thread is left and powers off the machine.
+calls `TCB::init()` and starts `userMain` as a user thread. It then waits on a
+kernel semaphore that `TCB::exit()` signals when the last user thread
+finishes, and powers off the machine. While it waits, main is blocked and
+uses no CPU time.
 
 **System calls.**
 
@@ -259,3 +261,36 @@ until no user thread is left and powers off the machine.
 | `thread_exit` (0x12) | none | does not return |
 | `thread_dispatch` (0x13) | none | |
 | `putc` (0x42) | `a1` character | temporary synchronous implementation |
+
+## Semaphores
+
+`KSemaphore` (`h/ksemaphore.hpp`) is a counting semaphore with a FIFO queue of
+blocked threads.
+
+- **`wait`:** decrements the value. If it becomes negative, the running thread
+  is appended to the semaphore's queue and `TCB::block()` marks it `BLOCKED`
+  and switches away. A blocked thread is in no ready queue and uses no CPU time.
+- **`signal`:** increments the value. If it was negative, the first waiting
+  thread is moved back to the ready queue with `TCB::unblock(thread, 0)`.
+- **`close`:** unblocks every waiting thread with `ERR_SEMAPHORE_CLOSED`,
+  which becomes the return value of their `sem_wait`, and frees the semaphore.
+
+Whatever `unblock` passes is stored in the TCB and returned by `block()` in the
+woken thread. That is how a wait learns whether it succeeded or the semaphore
+was closed.
+
+`ThreadQueue` (`h/thread_queue.hpp`) is the intrusive FIFO used both by the
+scheduler's ready queue and by every semaphore. A thread is in at most one of
+them at a time, so the single `TCB::next` link is enough. Its constructor is
+`constexpr`, so the scheduler's static queue is initialized at compile time.
+
+**Handles.** `sem_t` is the address of the `KSemaphore`. The object carries a
+magic value that is cleared when it is destroyed. The kernel rejects null
+handles and handles without the magic value with `ERR_INVALID_ARGUMENT`.
+
+| Call | ABI arguments | Returns |
+|---|---|---|
+| `sem_open` (0x21) | `a1` handle pointer, `a2` initial value | 0, `ERR_INVALID_ARGUMENT`, `ERR_OUT_OF_MEMORY` |
+| `sem_close` (0x22) | `a1` handle | 0, `ERR_INVALID_ARGUMENT` |
+| `sem_wait` (0x23) | `a1` handle | 0, `ERR_SEMAPHORE_CLOSED`, `ERR_INVALID_ARGUMENT` |
+| `sem_signal` (0x24) | `a1` handle | 0, `ERR_INVALID_ARGUMENT` |

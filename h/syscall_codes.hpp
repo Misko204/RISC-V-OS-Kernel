@@ -30,5 +30,6 @@ enum SyscallCode : uint64 {
 static const long ERR_UNKNOWN_SYSCALL  = -100;   // unknown system call number
 static const long ERR_OUT_OF_MEMORY    = -101;   // the kernel could not allocate memory
 static const long ERR_INVALID_ARGUMENT = -102;   // e.g. a null pointer where one is not allowed
+static const long ERR_SEMAPHORE_CLOSED = -103;   // the semaphore was closed while the thread was waiting
 
 #endif // _syscall_codes_hpp_

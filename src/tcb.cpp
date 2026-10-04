@@ -2,6 +2,7 @@
 
 #include "../h/tcb.hpp"
 #include "../h/scheduler.hpp"
+#include "../h/ksemaphore.hpp"
 #include "../h/memory_allocator.hpp"
 #include "../h/trap.hpp"
 #include "../h/riscv.hpp"
@@ -10,6 +11,7 @@
 TCB* TCB::runningThread = nullptr;
 TCB* TCB::finishedThreads = nullptr;
 size_t TCB::userThreadCount = 0;
+KSemaphore* TCB::userThreadsDone = nullptr;
 
 static void idleBody(void*) {
     while (true) { }
@@ -47,7 +49,7 @@ TCB* TCB::createKernelThread(Body body, void* arg) {
 
 TCB::TCB(Body body, void* arg, bool userMode, void* userStackTop) noexcept
 : context(), body(body), arg(arg), kernelStack(nullptr), userStack(nullptr),
-userMode(userMode), state(State::READY), next(nullptr) {
+userMode(userMode), state(State::READY), blockResult(0), next(nullptr) {
 
     if (body == nullptr) return;    // the main thread: already running, no stacks
 
@@ -110,7 +112,10 @@ void TCB::dispatch() {
 void TCB::exit() {
     TCB* current = runningThread;
     current->state = State::FINISHED;
-    if (current->userMode) userThreadCount--;
+    if (current->userMode) {
+        userThreadCount--;
+        if (userThreadCount == 0 && userThreadsDone != nullptr) userThreadsDone->signal();
+    }
 
     // The thread is still running on its kernel stack, so it cannot be freed
     // here. It is freed by a later dispatch, from another thread's stack.
@@ -118,6 +123,19 @@ void TCB::exit() {
     finishedThreads = current;
 
     dispatch();
+}
+
+int TCB::block() {
+    TCB* current = runningThread;
+    current->state = State::BLOCKED;
+    dispatch();                     // not put back into the ready queue
+    return current->blockResult;    // we are running again: unblock() was called
+}
+
+void TCB::unblock(TCB* thread, int result) {
+    thread->blockResult = result;
+    thread->state = State::READY;
+    Scheduler::put(thread);
 }
 
 // Frees finished threads, except the one that is still running.

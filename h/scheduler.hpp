@@ -3,6 +3,8 @@
 #ifndef _scheduler_hpp_
 #define _scheduler_hpp_
 
+#include "thread_queue.hpp"
+
 class TCB;
 
 class Scheduler {
@@ -17,8 +19,7 @@ public:
     static void setIdleThread(TCB* thread) { idleThread = thread; }
 
 private:
-    static TCB* head;
-    static TCB* tail;
+    static ThreadQueue readyQueue;
     static TCB* idleThread;
 };
 

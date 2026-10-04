@@ -61,6 +61,24 @@ void thread_dispatch() {
     syscall(SYS_THREAD_DISPATCH);
 }
 
+// ---------------------------------------------------------------- semaphores
+
+int sem_open(sem_t* handle, unsigned init) {
+    return (int)syscall(SYS_SEM_OPEN, (uint64)handle, init);
+}
+
+int sem_close(sem_t handle) {
+    return (int)syscall(SYS_SEM_CLOSE, (uint64)handle);
+}
+
+int sem_wait(sem_t id) {
+    return (int)syscall(SYS_SEM_WAIT, (uint64)id);
+}
+
+int sem_signal(sem_t id) {
+    return (int)syscall(SYS_SEM_SIGNAL, (uint64)id);
+}
+
 // ---------------------------------------------------------------- console
 
 void putc(char c) {

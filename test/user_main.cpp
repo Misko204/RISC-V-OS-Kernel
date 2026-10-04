@@ -5,7 +5,9 @@
 
 void userMain() {
     printString("\nuserMain started (user mode)\n");
-    int failures = testThreads();
+    int failures = 0;
+    failures += testThreads();
+    failures += testSemaphores();
     printString(failures == 0 ? "userMain: all user-mode tests passed\n"
                               : "userMain: SOME USER-MODE TESTS FAILED\n");
 }

@@ -6,6 +6,7 @@
 #include "../h/trap.hpp"
 #include "../h/memory_allocator.hpp"
 #include "../h/tcb.hpp"
+#include "../h/ksemaphore.hpp"
 #include "../lib/console.h"
 
 uint64 SyscallHandler::dispatch(TrapFrame* frame) {
@@ -17,6 +18,10 @@ uint64 SyscallHandler::dispatch(TrapFrame* frame) {
         case SYS_THREAD_CREATE:              return threadCreate(frame);
         case SYS_THREAD_EXIT:                return threadExit(frame);
         case SYS_THREAD_DISPATCH:            return threadDispatch(frame);
+        case SYS_SEM_OPEN:                   return semOpen(frame);
+        case SYS_SEM_CLOSE:                  return semClose(frame);
+        case SYS_SEM_WAIT:                   return semWait(frame);
+        case SYS_SEM_SIGNAL:                 return semSignal(frame);
         case SYS_PUTC:                       return putc(frame);
         default:                             return fromInt(ERR_UNKNOWN_SYSCALL);
     }
@@ -72,6 +77,44 @@ uint64 SyscallHandler::threadExit(TrapFrame*) {
 
 uint64 SyscallHandler::threadDispatch(TrapFrame*) {
     TCB::dispatch();
+    return 0;
+}
+
+// ---------------------------------------------------------------- semaphores
+
+// a1 = sem_t* handle, a2 = initial value.
+uint64 SyscallHandler::semOpen(TrapFrame* frame) {
+    sem_t* handle     = (sem_t*)frame->x[TrapFrame::A1];
+    unsigned initial  = (unsigned)frame->x[TrapFrame::A2];
+    if (handle == nullptr) return fromInt(ERR_INVALID_ARGUMENT);
+
+    KSemaphore* sem = KSemaphore::create(initial);
+    if (sem == nullptr) return fromInt(ERR_OUT_OF_MEMORY);
+
+    *handle = (sem_t)sem;
+    return 0;
+}
+
+// a1 = sem_t. Waiting threads are released with an error.
+uint64 SyscallHandler::semClose(TrapFrame* frame) {
+    KSemaphore* sem = KSemaphore::fromHandle((void*)frame->x[TrapFrame::A1]);
+    if (sem == nullptr) return fromInt(ERR_INVALID_ARGUMENT);
+    sem->close();
+    return 0;
+}
+
+// a1 = sem_t. May block; returns ERR_SEMAPHORE_CLOSED if closed while waiting.
+uint64 SyscallHandler::semWait(TrapFrame* frame) {
+    KSemaphore* sem = KSemaphore::fromHandle((void*)frame->x[TrapFrame::A1]);
+    if (sem == nullptr) return fromInt(ERR_INVALID_ARGUMENT);
+    return fromInt(sem->wait());
+}
+
+// a1 = sem_t.
+uint64 SyscallHandler::semSignal(TrapFrame* frame) {
+    KSemaphore* sem = KSemaphore::fromHandle((void*)frame->x[TrapFrame::A1]);
+    if (sem == nullptr) return fromInt(ERR_INVALID_ARGUMENT);
+    sem->signal();
     return 0;
 }
 
