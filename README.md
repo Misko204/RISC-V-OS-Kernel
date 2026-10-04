@@ -12,7 +12,7 @@ written from scratch in C++ and assembly and running on QEMU.
 - [x] Preemptive time sharing (timer interrupt)
 - [x] Timed sleep
 - [x] Buffered, interrupt-driven console I/O
-- [ ] Layered user API: ABI → C API → C++ API
+- [x] Layered user API: ABI → C API → C++ API
 
 ## Architecture
 

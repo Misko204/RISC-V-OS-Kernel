@@ -388,3 +388,42 @@ console driver are the kernel's own.
 |---|---|---|
 | `getc` (0x41) | none | the character (0–255), or `EOF` |
 | `putc` (0x42) | `a1` character | 0 |
+
+## C++ API
+
+`h/syscall_cpp.hpp` is the object-oriented layer on top of the C API. Every
+object stores the handle of the kernel object it represents and forwards its
+operations to the matching C function, which performs the system call.
+
+```
+Thread::start()  ->  thread_create()  ->  ecall SYS_THREAD_CREATE  ->  TCB::createUserThread()
+```
+
+- **`new` / `delete`.** The global operators (also the array forms) call
+  `mem_alloc` / `mem_free`. Kernel classes (`TCB`, `KSemaphore`) define their
+  own class-level operators, so the kernel never reaches these.
+- **`Thread`.** A thread runs either the function passed to the constructor,
+  or, for classes that use the protected default constructor, the virtual
+  `run()`. Nothing runs before `start()`. A run()-based thread is started
+  through a static `runWrapper` that receives the object as its argument and
+  calls `run()` on it. If a function was given to the constructor, `run()` is
+  ignored even when a derived class overrides it. `start()` on an already
+  started thread fails. The kernel frees the thread when it finishes, so the
+  destructor releases nothing. A run()-based thread needs its object to stay
+  alive while it runs.
+- **`Semaphore`.** The constructor opens a kernel semaphore and the destructor
+  closes it. Threads still waiting are released and their `wait()` fails.
+- **`PeriodicThread`.** The constructor passes a static `periodicBody` and
+  `this` to `Thread`'s function constructor, so `run()` stays free. The body
+  calls `periodicActivation()` and sleeps `period` ticks, until `terminate()`.
+  The class may not get extra data members, so `terminate()` marks the thread
+  by setting `period` to 0. The thread sees it when it next wakes up, and
+  finishes within one period.
+- **`Console`.** Static wrappers around `getc` and `putc`.
+
+The class layouts follow the API specification: no extra non-static data
+members and no extra virtual functions. Only private static helpers were added.
+
+**Limitation.** There is no C runtime, so constructors of global (static
+storage) objects are never run. Create API objects with `new` or as local
+variables.

@@ -15,6 +15,7 @@ int testThreads();
 int testSemaphores();
 int testTimer();
 int testConsole();
+int testCppApi();
 int testConsoleEcho();   // interactive: waits for a line from the keyboard
 
 #endif // _tests_hpp_

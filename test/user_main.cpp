@@ -13,6 +13,7 @@ void userMain() {
     failures += testSemaphores();
     failures += testTimer();
     failures += testConsole();
+    failures += testCppApi();
     if (INTERACTIVE_TESTS) failures += testConsoleEcho();
     printString(failures == 0 ? "userMain: all user-mode tests passed\n"
                               : "userMain: SOME USER-MODE TESTS FAILED\n");
