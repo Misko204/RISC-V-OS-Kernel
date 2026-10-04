@@ -11,7 +11,7 @@ written from scratch in C++ and assembly and running on QEMU.
 - [x] Counting semaphores
 - [x] Preemptive time sharing (timer interrupt)
 - [x] Timed sleep
-- [ ] Buffered, interrupt-driven console I/O
+- [x] Buffered, interrupt-driven console I/O
 - [ ] Layered user API: ABI → C API → C++ API
 
 ## Architecture
@@ -45,17 +45,19 @@ make clean
 h/      kernel and API headers
 src/    kernel and API sources (.cpp, .S)
 test/   kernel self-tests
-lib/    hardware access layer and boot code (prebuilt)
+lib/    hardware access layer and boot code (prebuilt hw.lib)
 docs/   design documentation
 ```
 
 ## Acknowledgements
 
-The boot code and hardware access layer in `lib/` are prebuilt from a stripped
-down version of [xv6-riscv](https://github.com/mit-pdos/xv6-riscv) (MIT
-License, see `LICENSE-xv6`). They were provided as course material for the
-Operating Systems 1 course at the School of Electrical Engineering, University
-of Belgrade. Everything in `h/` and `src/` is my own work.
+The boot code and hardware access layer in `lib/hw.lib` (machine-mode
+startup, timer forwarding, PLIC helpers) are prebuilt from a stripped down
+version of [xv6-riscv](https://github.com/mit-pdos/xv6-riscv) (MIT License,
+see `LICENSE-xv6`). They were provided as course material for the Operating
+Systems 1 course at the School of Electrical Engineering, University of
+Belgrade. Everything else, including the memory allocator and the console
+driver, is my own work in `h/`, `src/` and `test/`.
 
 ## License
 

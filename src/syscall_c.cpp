@@ -87,6 +87,10 @@ int time_sleep(time_t ticks) {
 
 // ---------------------------------------------------------------- console
 
+char getc() {
+    return (char)syscall(SYS_GETC);
+}
+
 void putc(char c) {
     syscall(SYS_PUTC, (uint64)(unsigned char)c);
 }

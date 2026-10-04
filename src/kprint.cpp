@@ -1,39 +1,18 @@
 // kprint.cpp - kernel debug output
 
 #include "../h/kprint.hpp"
-#include "../h/riscv.hpp"
-#include "../lib/console.h"
+#include "../h/kconsole.hpp"
 
-// Prints a single character with interrupts masked.
-//
-// When the UART's transmit buffer is full, __putc (console.lib) re-enables
-// interrupts and waits for the console interrupt to drain it. The timer
-// interrupt source is masked in sie for that time, so the wait can never be
-// preempted by a timer tick. This matters when kprintChar runs inside the
-// trap handler (e.g. for the putc system call): the kernel is not re-entrant.
+// Writes directly to the UART (by polling), bypassing the output buffer, so
+// it works at any time: before threads exist, inside the trap handler and
+// while reporting an exception.
 void kprintChar(char c) {
-    uint64 oldSstatus = Riscv::r_sstatus();
-    Riscv::mc_sstatus(Riscv::SSTATUS_SIE);          // disable interrupts
-    uint64 oldSie = Riscv::r_sie();
-    Riscv::mc_sie(Riscv::SIE_SSIE);                 // keep the timer out while __putc waits
-
-    __putc(c);
-
-    if (oldSie & Riscv::SIE_SSIE) Riscv::ms_sie(Riscv::SIE_SSIE);
-    if (oldSstatus & Riscv::SSTATUS_SIE) {          // re-enable only if they were enabled
-        Riscv::ms_sstatus(Riscv::SSTATUS_SIE);
-    } else {
-        Riscv::mc_sstatus(Riscv::SSTATUS_SIE);      // __putc may have left them enabled
-    }
-}
-
-static void kputc(char c) {
-    kprintChar(c);
+    KConsole::writeSync(c);
 }
 
 void kprintString(const char* s) {
     while (*s != '\0') {
-        kputc(*s);
+        kprintChar(*s);
         s++;
     }
 }
@@ -51,13 +30,13 @@ void kprintUInt(uint64 x, uint64 base) {
     if (base == 16) kprintString("0x");
 
     while (count > 0) {
-        kputc(buffer[--count]);                     // digits were stored in reverse order
+        kprintChar(buffer[--count]);                // digits were stored in reverse order
     }
 }
 
 void kprintInt(long x) {
     if (x < 0) {
-        kputc('-');
+        kprintChar('-');
         kprintUInt((uint64)0 - (uint64)x);          // safe even for the minimum long value
     } else {
         kprintUInt((uint64)x);

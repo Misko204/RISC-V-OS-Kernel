@@ -8,10 +8,13 @@
 // Kernel-mode tests, called from main().
 int testMemoryAllocator();
 int testSystemCalls();
+int testConsoleBuffers();
 
 // User-mode tests, called from userMain().
 int testThreads();
 int testSemaphores();
 int testTimer();
+int testConsole();
+int testConsoleEcho();   // interactive: waits for a line from the keyboard
 
 #endif // _tests_hpp_

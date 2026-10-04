@@ -7,7 +7,7 @@
 #include "../h/memory_allocator.hpp"
 #include "../h/tcb.hpp"
 #include "../h/ksemaphore.hpp"
-#include "../h/kprint.hpp"
+#include "../h/kconsole.hpp"
 #include "../h/timer.hpp"
 
 uint64 SyscallHandler::dispatch(TrapFrame* frame) {
@@ -24,6 +24,7 @@ uint64 SyscallHandler::dispatch(TrapFrame* frame) {
         case SYS_SEM_WAIT:                   return semWait(frame);
         case SYS_SEM_SIGNAL:                 return semSignal(frame);
         case SYS_TIME_SLEEP:                 return timeSleep(frame);
+        case SYS_GETC:                       return getc(frame);
         case SYS_PUTC:                       return putc(frame);
         default:                             return fromInt(ERR_UNKNOWN_SYSCALL);
     }
@@ -130,8 +131,13 @@ uint64 SyscallHandler::timeSleep(TrapFrame* frame) {
 
 // ---------------------------------------------------------------- console
 
-// a1 = character. Temporary: synchronous output through console.lib.
+// Returns the next character from the keyboard (blocks until there is one), or EOF.
+uint64 SyscallHandler::getc(TrapFrame*) {
+    return fromInt(KConsole::getc());
+}
+
+// a1 = character. Queued for output; blocks only while the output buffer is full.
 uint64 SyscallHandler::putc(TrapFrame* frame) {
-    kprintChar((char)frame->x[TrapFrame::A1]);
+    KConsole::putc((char)frame->x[TrapFrame::A1]);
     return 0;
 }

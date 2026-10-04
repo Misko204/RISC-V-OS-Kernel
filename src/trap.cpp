@@ -5,7 +5,7 @@
 #include "../h/kprint.hpp"
 #include "../h/syscall_handler.hpp"
 #include "../h/timer.hpp"
-#include "../lib/console.h"
+#include "../h/kconsole.hpp"
 
 // Called from trap_entry.S. extern "C" keeps the symbol name unmangled.
 extern "C" void trapHandler(TrapFrame* frame) {
@@ -48,11 +48,15 @@ void Trap::handleTimerInterrupt() {
 }
 
 void Trap::handleExternalInterrupt() {
-    // Temporary: the console driver from console.lib claims and completes the interrupt.
-    console_handler();
+    // Ask the interrupt controller (PLIC) which device interrupted, handle it,
+    // and tell the PLIC we are done so it can deliver the next one.
+    int irq = plic_claim();
+    if (irq == (int)CONSOLE_IRQ) KConsole::handleInterrupt();
+    if (irq != 0) plic_complete(irq);
 }
 
 void Trap::handleException(TrapFrame* frame, uint64 scause) {
+    KConsole::flushSync();              // print whatever user output is still buffered
     kprintString("\n*** Unhandled exception ***\n");
     kprintString("scause = ");  kprintUInt(scause, 16);         kprintString("\n");
     kprintString("sepc   = ");  kprintUInt(frame->sepc, 16);    kprintString("\n");

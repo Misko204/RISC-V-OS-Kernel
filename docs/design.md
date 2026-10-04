@@ -135,7 +135,7 @@ prefix) to avoid clashes at link time.
 - `HEAP_END_ADDR` is `0x88000000` (128 MiB of RAM starting at `0x80000000`).
 - The timer interrupt arrives as a supervisor software interrupt
   (`scause = 0x8000000000000001`) at 10 Hz.
-- The console is a UART behind the PLIC (IRQ 10).
+- The console is an NS16550A UART at `0x10000000`, behind the PLIC (IRQ 10).
 - Writing `0x5555` to `0x100000` powers off QEMU.
 
 ## Memory allocator
@@ -194,7 +194,7 @@ lets the handler switch threads: each thread returns through its own frame.
 |---|---|---|
 | 8, 9 | `ecall` from U-mode / S-mode | `sepc += 4`, run the system call, result in `a0` |
 | interrupt 1 | timer (forwarded as a software interrupt) | clear `sip.SSIP`, `Timer::tick()` |
-| interrupt 9 | external (console via PLIC) | console driver |
+| interrupt 9 | external (console via PLIC) | `plic_claim`, `KConsole::handleInterrupt()`, `plic_complete` |
 | anything else | exception | print `scause`, `sepc`, `stval`, mode, and halt |
 
 **ABI.** `a0` holds the call number, `a1`–`a4` the arguments, and the result
@@ -331,13 +331,60 @@ sleep(A, 6), sleep(B, 2), sleep(C, 4)   ->   B:2 -> C:2 -> A:2
 The list is linked through `TCB::next`. A sleeping thread is `BLOCKED` and
 in no other queue, so the link is free to use.
 
-**Interaction with console.lib.** While the UART transmit buffer is full,
-`__putc` from console.lib re-enables interrupts and waits for the console
-interrupt. `kprintChar`, also used by the temporary `putc` system call,
-masks the timer source in `sie` around the call, so a tick can never preempt
-code that is inside the trap handler. This workaround goes away with the
-kernel's own console driver.
-
 | Call | ABI arguments | Returns |
 |---|---|---|
 | `time_sleep` (0x31) | `a1` ticks | 0 |
+
+## Console
+
+`KConsole` (`h/kconsole.hpp`) is the console driver. It decouples the threads
+from the UART with two ring buffers (`CharBuffer`, 256 characters each), so
+that no system call ever busy-waits for the hardware.
+
+```
+putc ──> [ output buffer ] ──> output thread ──> UART TX
+                                    (polls the "ready to send" bit)
+
+UART RX ──> console interrupt ──> [ input buffer ] ──> getc
+```
+
+**Output.** The `putc` system call waits on `outputSpace`, a semaphore that
+counts free slots, appends the character and signals `outputItems`. It
+returns at once unless the buffer is full; then the caller blocks until there
+is room. A supervisor-mode kernel thread waits on `outputItems`. When the UART
+can take a character, it moves one from the buffer to the transmit register
+and signals `outputSpace`. While the UART is busy the thread yields instead
+of spinning.
+
+**Input.** On a console interrupt the trap handler asks the PLIC which device
+interrupted (`plic_claim`). For the console it reads every character the UART
+has received into the input buffer, signalling `inputItems` for each one, and
+then acknowledges the PLIC (`plic_complete`). The interrupt cannot wait, so
+characters that do not fit into a full buffer are dropped. The `getc` system
+call waits on `inputItems` and takes the oldest character.
+
+**Mutual exclusion.** The trap handler uses the buffers with interrupts
+disabled. The output thread runs outside it, so it disables interrupts while
+it takes a character and writes it to the UART. On a single core that is
+enough.
+
+**UART interrupts.** The boot code enables both the "data received" and
+the "transmitter empty" UART interrupts. Output is driven by the thread, so
+`KConsole::init()` leaves only the receive interrupt enabled. Otherwise an
+idle transmitter would keep the interrupt line raised.
+
+**Kernel output.** `kprint` does not go through the buffer. It writes
+straight to the UART by polling (`KConsole::writeSync`), so it works before
+any thread exists, inside the trap handler and while reporting an exception.
+To keep the order of messages, `main` waits until the output buffer is empty
+before its final message. The exception handler first writes out the buffer
+by polling (`flushSync`).
+
+**No borrowed drivers.** The kernel is linked only with `hw.lib`, which
+provides the boot code, the timer and the PLIC helpers. The allocator and the
+console driver are the kernel's own.
+
+| Call | ABI arguments | Returns |
+|---|---|---|
+| `getc` (0x41) | none | the character (0–255), or `EOF` |
+| `putc` (0x42) | `a1` character | 0 |

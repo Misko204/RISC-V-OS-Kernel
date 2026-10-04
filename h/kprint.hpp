@@ -1,6 +1,6 @@
 // kprint.hpp - kernel debug output
-// Currently uses __putc from console.lib; will be redirected to the kernel's
-// own console driver later.
+// Writes straight to the UART by polling (see KConsole::writeSync), so it can
+// be used anywhere in the kernel, including the trap handler.
 
 #ifndef _kprint_hpp_
 #define _kprint_hpp_

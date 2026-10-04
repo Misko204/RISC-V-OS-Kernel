@@ -60,6 +60,12 @@ int time_sleep(time_t ticks);
 
 // ---------------------------------------------------------------- console
 
+const int EOF = -1;
+
+// Reads one character from the console, waiting until one is available.
+// Returns EOF on error.
+char getc();
+
 // Writes one character to the console.
 void putc(char c);
 
