@@ -4,6 +4,7 @@
 #include "../h/riscv.hpp"
 #include "../h/kprint.hpp"
 #include "../h/syscall_handler.hpp"
+#include "../h/timer.hpp"
 #include "../lib/console.h"
 
 // Called from trap_entry.S. extern "C" keeps the symbol name unmangled.
@@ -42,8 +43,8 @@ void Trap::handleSystemCall(TrapFrame* frame) {
 }
 
 void Trap::handleTimerInterrupt() {
-    // Acknowledge the interrupt. Time sharing is added later.
-    Riscv::mc_sip(Riscv::SIP_SSIP);
+    Riscv::mc_sip(Riscv::SIP_SSIP);     // acknowledge
+    Timer::tick();                      // may switch to another thread
 }
 
 void Trap::handleExternalInterrupt() {

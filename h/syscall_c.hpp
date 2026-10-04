@@ -52,6 +52,12 @@ int sem_wait(sem_t id);
 // Signals the semaphore. Returns 0, or a negative error code.
 int sem_signal(sem_t id);
 
+// ---------------------------------------------------------------- time
+
+// Suspends the calling thread for `ticks` timer periods (10 ticks per second).
+// Returns 0 on success, a negative error code otherwise.
+int time_sleep(time_t ticks);
+
 // ---------------------------------------------------------------- console
 
 // Writes one character to the console.

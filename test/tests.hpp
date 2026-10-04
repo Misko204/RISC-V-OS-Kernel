@@ -12,5 +12,6 @@ int testSystemCalls();
 // User-mode tests, called from userMain().
 int testThreads();
 int testSemaphores();
+int testTimer();
 
 #endif // _tests_hpp_

@@ -7,6 +7,7 @@
 
 #include "../lib/hw.h"
 
+void kprintChar(char c);
 void kprintString(const char* s);
 void kprintUInt(uint64 x, uint64 base = 10);   // base: 10 or 16
 void kprintInt(long x);

@@ -8,6 +8,7 @@ void userMain() {
     int failures = 0;
     failures += testThreads();
     failures += testSemaphores();
+    failures += testTimer();
     printString(failures == 0 ? "userMain: all user-mode tests passed\n"
                               : "userMain: SOME USER-MODE TESTS FAILED\n");
 }

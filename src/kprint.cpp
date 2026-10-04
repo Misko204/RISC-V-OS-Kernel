@@ -5,13 +5,30 @@
 #include "../lib/console.h"
 
 // Prints a single character with interrupts masked.
-static void kputc(char c) {
+//
+// When the UART's transmit buffer is full, __putc (console.lib) re-enables
+// interrupts and waits for the console interrupt to drain it. The timer
+// interrupt source is masked in sie for that time, so the wait can never be
+// preempted by a timer tick. This matters when kprintChar runs inside the
+// trap handler (e.g. for the putc system call): the kernel is not re-entrant.
+void kprintChar(char c) {
     uint64 oldSstatus = Riscv::r_sstatus();
     Riscv::mc_sstatus(Riscv::SSTATUS_SIE);          // disable interrupts
+    uint64 oldSie = Riscv::r_sie();
+    Riscv::mc_sie(Riscv::SIE_SSIE);                 // keep the timer out while __putc waits
+
     __putc(c);
+
+    if (oldSie & Riscv::SIE_SSIE) Riscv::ms_sie(Riscv::SIE_SSIE);
     if (oldSstatus & Riscv::SSTATUS_SIE) {          // re-enable only if they were enabled
         Riscv::ms_sstatus(Riscv::SSTATUS_SIE);
+    } else {
+        Riscv::mc_sstatus(Riscv::SSTATUS_SIE);      // __putc may have left them enabled
     }
+}
+
+static void kputc(char c) {
+    kprintChar(c);
 }
 
 void kprintString(const char* s) {

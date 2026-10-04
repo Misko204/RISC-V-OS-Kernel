@@ -20,6 +20,12 @@ public:
         SIP_SEIP = (1UL << 9),       // supervisor external interrupt (console)
     };
 
+    // ---- sie bits (enabled interrupt sources) ----
+    enum BitMaskSie : uint64 {
+        SIE_SSIE = (1UL << 1),       // software interrupt (timer) enabled
+        SIE_SEIE = (1UL << 9),       // external interrupt (console) enabled
+    };
+
     // ---- scause values ----
     static constexpr uint64 SCAUSE_TIMER         = 0x8000000000000001UL;
     static constexpr uint64 SCAUSE_EXTERNAL      = 0x8000000000000009UL;
@@ -51,6 +57,12 @@ public:
     static inline void   w_sip(uint64 value);
     static inline void   ms_sip(uint64 mask);
     static inline void   mc_sip(uint64 mask);
+
+    // ---- sie ----
+    static inline uint64 r_sie();
+    static inline void   w_sie(uint64 value);
+    static inline void   ms_sie(uint64 mask);
+    static inline void   mc_sie(uint64 mask);
 
     // Powers off the QEMU emulator.
     static inline void haltEmulator();
@@ -128,6 +140,21 @@ inline void Riscv::ms_sip(uint64 mask) {
 }
 inline void Riscv::mc_sip(uint64 mask) {
     __asm__ volatile ("csrc sip, %[mask]" : : [mask] "r"(mask));
+}
+
+inline uint64 Riscv::r_sie() {
+    uint64 volatile value;
+    __asm__ volatile ("csrr %[value], sie" : [value] "=r"(value));
+    return value;
+}
+inline void Riscv::w_sie(uint64 value) {
+    __asm__ volatile ("csrw sie, %[value]" : : [value] "r"(value));
+}
+inline void Riscv::ms_sie(uint64 mask) {
+    __asm__ volatile ("csrs sie, %[mask]" : : [mask] "r"(mask));
+}
+inline void Riscv::mc_sie(uint64 mask) {
+    __asm__ volatile ("csrc sie, %[mask]" : : [mask] "r"(mask));
 }
 
 inline void Riscv::haltEmulator() {

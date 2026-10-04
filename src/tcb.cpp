@@ -12,6 +12,7 @@ TCB* TCB::runningThread = nullptr;
 TCB* TCB::finishedThreads = nullptr;
 size_t TCB::userThreadCount = 0;
 KSemaphore* TCB::userThreadsDone = nullptr;
+time_t TCB::sliceTicksUsed = 0;
 
 static void idleBody(void*) {
     while (true) { }
@@ -49,7 +50,8 @@ TCB* TCB::createKernelThread(Body body, void* arg) {
 
 TCB::TCB(Body body, void* arg, bool userMode, void* userStackTop) noexcept
 : context(), body(body), arg(arg), kernelStack(nullptr), userStack(nullptr),
-userMode(userMode), state(State::READY), blockResult(0), next(nullptr) {
+userMode(userMode), state(State::READY), blockResult(0),
+timeSlice(DEFAULT_TIME_SLICE), sleepDelta(0), next(nullptr) {
 
     if (body == nullptr) return;    // the main thread: already running, no stacks
 
@@ -103,6 +105,7 @@ void TCB::dispatch() {
     TCB* nextThread = Scheduler::get();
     nextThread->state = State::RUNNING;
     runningThread = nextThread;
+    sliceTicksUsed = 0;             // a fresh time slice
 
     if (nextThread != current) {
         contextSwitch(&current->context, &nextThread->context);
@@ -123,6 +126,12 @@ void TCB::exit() {
     finishedThreads = current;
 
     dispatch();
+}
+
+void TCB::timerTick() {
+    if (++sliceTicksUsed >= runningThread->timeSlice) {
+        dispatch();                 // asynchronous context switch (preemption)
+    }
 }
 
 int TCB::block() {

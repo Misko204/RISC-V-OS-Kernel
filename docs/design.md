@@ -193,7 +193,7 @@ lets the handler switch threads: each thread returns through its own frame.
 | `scause` | Meaning | Action |
 |---|---|---|
 | 8, 9 | `ecall` from U-mode / S-mode | `sepc += 4`, run the system call, result in `a0` |
-| interrupt 1 | timer (forwarded as a software interrupt) | clear `sip.SSIP` |
+| interrupt 1 | timer (forwarded as a software interrupt) | clear `sip.SSIP`, `Timer::tick()` |
 | interrupt 9 | external (console via PLIC) | console driver |
 | anything else | exception | print `scause`, `sepc`, `stval`, mode, and halt |
 
@@ -294,3 +294,50 @@ handles and handles without the magic value with `ERR_INVALID_ARGUMENT`.
 | `sem_close` (0x22) | `a1` handle | 0, `ERR_INVALID_ARGUMENT` |
 | `sem_wait` (0x23) | `a1` handle | 0, `ERR_SEMAPHORE_CLOSED`, `ERR_INVALID_ARGUMENT` |
 | `sem_signal` (0x24) | `a1` handle | 0, `ERR_INVALID_ARGUMENT` |
+
+## Time sharing and sleeping
+
+The timer interrupt arrives 10 times per second. `Timer::tick()`
+(`src/timer.cpp`) does two things, in this order:
+
+1. **Wakes sleeping threads** whose time is up. They go to the ready queue.
+2. **Charges the running thread** one tick (`TCB::timerTick()`). When a thread
+   has used `DEFAULT_TIME_SLICE` ticks (2, i.e. 0.2 s) since it was scheduled,
+   `dispatch()` preempts it and it goes to the back of the ready queue. Every
+   `dispatch` starts a fresh slice for the thread it schedules.
+
+Waking sleepers first means a thread whose sleep ends can be scheduled at the
+same tick.
+
+**Why preemption is safe here.** The interrupt is handled like any other trap:
+the full register state of the interrupted thread is already in its
+`TrapFrame`, so switching away inside the handler and resuming later is the
+same as for a blocking system call. User code can be preempted anywhere. In
+S-mode only the idle thread runs with interrupts enabled. The trap handler
+itself always runs with interrupts disabled, so the kernel is never preempted.
+
+**Sleeping.** `time_sleep(n)` puts the running thread into a sleep list
+ordered by wake-up time and blocks it. The list is a *delta list*: each entry
+stores the ticks between the previous entry's wake-up and its own. A tick only
+decrements the first entry and wakes every leading entry that reached 0, so it
+costs O(1) unless threads actually wake up. Inserting walks the list. Using
+`<=` while walking keeps threads with equal wake-up times in FIFO order.
+`time_sleep(0)` returns immediately.
+
+```
+sleep(A, 6), sleep(B, 2), sleep(C, 4)   ->   B:2 -> C:2 -> A:2
+```
+
+The list is linked through `TCB::next`. A sleeping thread is `BLOCKED` and
+in no other queue, so the link is free to use.
+
+**Interaction with console.lib.** While the UART transmit buffer is full,
+`__putc` from console.lib re-enables interrupts and waits for the console
+interrupt. `kprintChar`, also used by the temporary `putc` system call,
+masks the timer source in `sie` around the call, so a tick can never preempt
+code that is inside the trap handler. This workaround goes away with the
+kernel's own console driver.
+
+| Call | ABI arguments | Returns |
+|---|---|---|
+| `time_sleep` (0x31) | `a1` ticks | 0 |

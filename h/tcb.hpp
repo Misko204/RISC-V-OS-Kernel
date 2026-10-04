@@ -56,6 +56,10 @@ public:
     // The semaphore is signalled when the last user thread finishes.
     static void setUserThreadsDoneSemaphore(KSemaphore* sem) { userThreadsDone = sem; }
 
+    // Called on every timer tick: preempts the running thread when its time
+    // slice is used up.
+    static void timerTick();
+
     static TCB* running() { return runningThread; }
     static size_t liveUserThreads() { return userThreadCount; }
 
@@ -82,14 +86,18 @@ private:
     bool    userMode;
     State   state;
     int     blockResult;    // value returned by block() after unblock()
+    time_t  timeSlice;      // ticks the thread may run before it is preempted
+    time_t  sleepDelta;     // in the sleep list: ticks after the previous sleeper wakes
     TCB*    next;           // link in a ThreadQueue or in the list of finished threads
 
     static TCB* runningThread;
     static TCB* finishedThreads;
     static size_t userThreadCount;
     static KSemaphore* userThreadsDone;
+    static time_t sliceTicksUsed;   // ticks the running thread has used since it was scheduled
 
     friend class ThreadQueue;
+    friend class Timer;
 };
 
 #endif // _tcb_hpp_

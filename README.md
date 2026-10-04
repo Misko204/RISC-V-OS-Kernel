@@ -9,8 +9,8 @@ written from scratch in C++ and assembly and running on QEMU.
 - [x] Trap handling and system call ABI (`ecall`)
 - [x] Threads with context switching
 - [x] Counting semaphores
-- [ ] Preemptive time sharing (timer interrupt)
-- [ ] Timed sleep
+- [x] Preemptive time sharing (timer interrupt)
+- [x] Timed sleep
 - [ ] Buffered, interrupt-driven console I/O
 - [ ] Layered user API: ABI → C API → C++ API
 

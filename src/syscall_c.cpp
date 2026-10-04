@@ -79,6 +79,12 @@ int sem_signal(sem_t id) {
     return (int)syscall(SYS_SEM_SIGNAL, (uint64)id);
 }
 
+// ---------------------------------------------------------------- time
+
+int time_sleep(time_t ticks) {
+    return (int)syscall(SYS_TIME_SLEEP, ticks);
+}
+
 // ---------------------------------------------------------------- console
 
 void putc(char c) {
