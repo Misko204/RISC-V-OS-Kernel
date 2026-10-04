@@ -13,9 +13,9 @@ static uint64 syscall(uint64 code, uint64 arg1 = 0, uint64 arg2 = 0,
     register uint64 a3 __asm__("a3") = arg3;
     register uint64 a4 __asm__("a4") = arg4;
     __asm__ volatile ("ecall"
-    : "+r"(a0)
-    : "r"(a1), "r"(a2), "r"(a3), "r"(a4)
-    : "memory");
+                    : "+r"(a0)
+                    : "r"(a1), "r"(a2), "r"(a3), "r"(a4)
+                    : "memory");
     return a0;
 }
 

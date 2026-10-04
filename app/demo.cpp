@@ -41,7 +41,7 @@ static const int MEALS = 3;
 class Philosopher : public Thread {
 public:
     Philosopher(int id, Semaphore* left, Semaphore* right, Semaphore* seats, Semaphore* done)
-            : Thread(), id(id), left(left), right(right), seats(seats), done(done) { }
+        : Thread(), id(id), left(left), right(right), seats(seats), done(done) { }
 
 protected:
     void run() override {

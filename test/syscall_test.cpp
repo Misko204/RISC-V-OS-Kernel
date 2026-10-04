@@ -65,17 +65,17 @@ int testSystemCalls() {
     // 6. The trap saves and restores registers the compiler would not expect to change.
     uint64 t1Value, t2Value, a7Value;
     __asm__ volatile (
-    "li t1, 0x1234\n"
-    "li t2, 0x5678\n"
-    "li a7, 0x9abc\n"
-    "li a0, %[code]\n"
-    "ecall\n"
-    "mv %[t1], t1\n"
-    "mv %[t2], t2\n"
-    "mv %[a7], a7\n"
-    : [t1] "=r"(t1Value), [t2] "=r"(t2Value), [a7] "=r"(a7Value)
-    : [code] "i"(SYS_MEM_GET_FREE_SPACE)
-    : "t1", "t2", "a7", "a0", "memory");
+        "li t1, 0x1234\n"
+        "li t2, 0x5678\n"
+        "li a7, 0x9abc\n"
+        "li a0, %[code]\n"
+        "ecall\n"
+        "mv %[t1], t1\n"
+        "mv %[t2], t2\n"
+        "mv %[a7], a7\n"
+        : [t1] "=r"(t1Value), [t2] "=r"(t2Value), [a7] "=r"(a7Value)
+        : [code] "i"(SYS_MEM_GET_FREE_SPACE)
+        : "t1", "t2", "a7", "a0", "memory");
     check("registers preserved across ecall",
           t1Value == 0x1234 && t2Value == 0x5678 && a7Value == 0x9abc);
 

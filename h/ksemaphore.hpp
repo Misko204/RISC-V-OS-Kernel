@@ -33,7 +33,7 @@ public:
 
 private:
     explicit KSemaphore(unsigned initialValue) noexcept
-            : magic(MAGIC), val((int)initialValue), blocked() { }
+        : magic(MAGIC), val((int)initialValue), blocked() { }
     ~KSemaphore() { magic = 0; }
 
     static constexpr uint64 MAGIC = 0x5E4A9408E5E4A940UL;

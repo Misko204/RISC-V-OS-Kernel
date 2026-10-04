@@ -36,9 +36,9 @@ void KSemaphore::close() {
 }
 
 void* KSemaphore::operator new(size_t size) noexcept {
-return MemoryAllocator::alloc(MemoryAllocator::bytesToBlocks(size));
+    return MemoryAllocator::alloc(MemoryAllocator::bytesToBlocks(size));
 }
 
 void KSemaphore::operator delete(void* ptr) noexcept {
-MemoryAllocator::free(ptr);
+    MemoryAllocator::free(ptr);
 }

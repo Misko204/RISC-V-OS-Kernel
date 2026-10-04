@@ -68,7 +68,7 @@ The machine powers off when the last user thread finishes.
 
 `app/demo.cpp` uses only the C++ API. First, five philosopher threads share
 five forks (semaphores) while a periodic thread prints the time. Then the
-keyboard is echoed back until an empty line is entered.
+keyboard is echoed back until `q` is entered.
 
 ```
 Type t or d and press Enter: d
@@ -86,10 +86,10 @@ Type t or d and press Enter: d
   philosopher 2 is done
   all philosophers have eaten
 
---- Keyboard: type a line and press Enter (an empty line ends the demo) ---
+--- Keyboard: type a line and press Enter (q ends the demo) ---
 > hello world
   HELLO WORLD  (11 characters)
->
+> q
 
 Demo finished
 

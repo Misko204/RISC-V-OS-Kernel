@@ -162,9 +162,9 @@ void TCB::reapFinished() {
 }
 
 void* TCB::operator new(size_t size) noexcept {
-return MemoryAllocator::alloc(MemoryAllocator::bytesToBlocks(size));
+    return MemoryAllocator::alloc(MemoryAllocator::bytesToBlocks(size));
 }
 
 void TCB::operator delete(void* ptr) noexcept {
-MemoryAllocator::free(ptr);
+    MemoryAllocator::free(ptr);
 }

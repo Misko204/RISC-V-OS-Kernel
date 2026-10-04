@@ -10,7 +10,7 @@ void* operator new (size_t size) {
 }
 
 void operator delete (void* ptr) noexcept {
-if (ptr != nullptr) mem_free(ptr);
+    if (ptr != nullptr) mem_free(ptr);
 }
 
 void* operator new[] (size_t size) {
@@ -18,7 +18,7 @@ void* operator new[] (size_t size) {
 }
 
 void operator delete[] (void* ptr) noexcept {
-if (ptr != nullptr) mem_free(ptr);
+    if (ptr != nullptr) mem_free(ptr);
 }
 
 // ---------------------------------------------------------------- Thread
